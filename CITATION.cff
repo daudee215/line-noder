@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "line-noder: planar edge-node graph from arbitrary polylines"
+authors:
+  - family-names: Tasleem
+    given-names: Daud
+    email: daudtasleem215@gmail.com
+version: 0.1.0
+date-released: "2026-04-27"
+url: "https://github.com/daudee215/line-noder"
+license: MIT
+keywords:
+  - gis
+  - topology
+  - planar-graph
+  - geospatial
+  - network-analysis
+  - line-intersection

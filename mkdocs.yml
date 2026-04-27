@@ -1,0 +1,16 @@
+site_name: line-noder
+site_description: Planar edge-node graph from arbitrary polylines — pure Python, no PostGIS required
+site_url: https://daudee215.github.io/line-noder/
+repo_url: https://github.com/daudee215/line-noder
+repo_name: daudee215/line-noder
+
+docs_dir: docs
+site_dir: site
+
+nav:
+  - Home: index.md
+  - API Reference: api.md
+  - Architecture Decision Record: adr/0001-architecture.md
+  - Roadmap: roadmap.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
