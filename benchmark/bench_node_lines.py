@@ -2,7 +2,12 @@
 """Benchmarks for node_lines on synthetic large datasets.
 
 Run with: uv run pytest benchmark/ --benchmark-only -v
+
+Each scenario runs both backends so the speedup is directly visible in
+the pytest-benchmark summary.
 """
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
@@ -25,34 +30,72 @@ def _random_lines(n: int, seed: int = 0) -> list[np.ndarray]:
     return [np.stack([s, e]) for s, e in zip(starts, ends, strict=False)]
 
 
-@pytest.fixture
-def grid_100x100():
-    return _grid(100, 100)
+def _short_random_lines(n: int, seed: int = 0) -> list[np.ndarray]:
+    """Sparse network (short segments) — closer to road / hydro networks."""
+    rng = np.random.default_rng(seed)
+    starts = rng.uniform(0, 1000, (n, 2))
+    deltas = rng.normal(0, 5, (n, 2))
+    ends = starts + deltas
+    return [np.stack([s, e]) for s, e in zip(starts, ends, strict=False)]
 
 
-@pytest.fixture
-def random_1000():
-    return _random_lines(1000)
+# ---------------------------------------------------------------------------
+# Pairwise (v0.1 default)
+# ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def random_5000():
-    return _random_lines(5000)
+@pytest.mark.benchmark(group="grid_100x100")
+def test_bench_grid_100x100_pairwise(benchmark):
+    lines = _grid(100, 100)
+    benchmark(node_lines, lines, method="pairwise")
 
 
-def test_bench_grid_100x100(benchmark, grid_100x100):
-    """100x100 regular grid — 10,000 lines, 10,000 interior intersections."""
-    result = benchmark(node_lines, grid_100x100)
-    assert len(result.nodes) > 0
+@pytest.mark.benchmark(group="random_1000")
+def test_bench_random_1000_pairwise(benchmark):
+    lines = _random_lines(1000)
+    benchmark(node_lines, lines, method="pairwise")
 
 
-def test_bench_random_1000(benchmark, random_1000):
-    """1,000 random line segments."""
-    result = benchmark(node_lines, random_1000)
-    assert len(result.nodes) > 0
+@pytest.mark.benchmark(group="sparse_5000")
+def test_bench_sparse_5000_pairwise(benchmark):
+    lines = _short_random_lines(5000)
+    benchmark(node_lines, lines, method="pairwise")
 
 
-def test_bench_random_5000(benchmark, random_5000):
-    """5,000 random line segments — stress test."""
-    result = benchmark(node_lines, random_5000)
-    assert len(result.nodes) > 0
+@pytest.mark.benchmark(group="sparse_20000")
+def test_bench_sparse_20000_pairwise(benchmark):
+    lines = _short_random_lines(20000)
+    benchmark(node_lines, lines, method="pairwise")
+
+
+# ---------------------------------------------------------------------------
+# STRtree (v0.2 speedup)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.benchmark(group="grid_100x100")
+def test_bench_grid_100x100_strtree(benchmark):
+    pytest.importorskip("shapely")
+    lines = _grid(100, 100)
+    benchmark(node_lines, lines, method="strtree")
+
+
+@pytest.mark.benchmark(group="random_1000")
+def test_bench_random_1000_strtree(benchmark):
+    pytest.importorskip("shapely")
+    lines = _random_lines(1000)
+    benchmark(node_lines, lines, method="strtree")
+
+
+@pytest.mark.benchmark(group="sparse_5000")
+def test_bench_sparse_5000_strtree(benchmark):
+    pytest.importorskip("shapely")
+    lines = _short_random_lines(5000)
+    benchmark(node_lines, lines, method="strtree")
+
+
+@pytest.mark.benchmark(group="sparse_20000")
+def test_bench_sparse_20000_strtree(benchmark):
+    pytest.importorskip("shapely")
+    lines = _short_random_lines(20000)
+    benchmark(node_lines, lines, method="strtree")

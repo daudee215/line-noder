@@ -8,12 +8,13 @@ from numpy.typing import ArrayLike, NDArray
 
 from line_noder._geom import extract_segments, segment_bboxes
 from line_noder._graph import PlanarGraph, build_graph
-from line_noder._intersect import find_intersections
+from line_noder._intersect import Method, find_intersections
 from line_noder._split import split_segments
 
 
 def node_lines(
     lines: list[ArrayLike],
+    method: Method = "auto",
 ) -> PlanarGraph:
     """Detect all interior line-line intersections and build a planar graph.
 
@@ -28,6 +29,20 @@ def node_lines(
         ``(N, 2)`` float64 array, where N >= 2.  Coordinates are assumed
         to be in a projected CRS (metres or feet); geographic long/lat is
         accepted but intersection accuracy degrades near the poles.
+    method:
+        Intersection-detection backend.
+
+        * ``"auto"`` (default) — pick the faster backend automatically:
+          ``strtree`` if Shapely is installed and the input has ≥500
+          segments, ``pairwise`` otherwise.
+        * ``"pairwise"`` — vectorised NumPy pairwise check (v0.1 default).
+          O(n²) worst case but lowest constant on small inputs.
+        * ``"strtree"`` — Shapely / GEOS Sort-Tile-Recursive R-tree
+          spatial index (added in v0.2).  O(n log n) build, O(log n + c)
+          per query.  Wins on large sparse inputs.  Requires
+          ``pip install 'line-noder[geo]'``.
+
+        All backends produce equivalent topology; only performance differs.
 
     Returns
     -------
@@ -52,7 +67,8 @@ def node_lines(
     Raises
     ------
     ValueError
-        If any element of *lines* cannot be converted to a valid (N, 2) array.
+        If any element of *lines* cannot be converted to a valid (N, 2) array,
+        or if *method* is not one of ``"auto" | "pairwise" | "sweep"``.
     """
     if not lines:
         return PlanarGraph()
@@ -64,6 +80,6 @@ def node_lines(
 
     segments, _seg_to_line = extract_segments(np_lines)
     bboxes = segment_bboxes(segments)
-    intersections = find_intersections(segments, bboxes)
+    intersections = find_intersections(segments, bboxes, method=method)
     sub_segs = split_segments(segments, intersections)
     return build_graph(sub_segs)

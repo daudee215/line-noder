@@ -39,11 +39,12 @@ The existing Python options all fall short:
 ## Install
 
 ```bash
-pip install line-noder              # NumPy core only
-pip install "line-noder[geo]"       # + Shapely / GeoPandas helpers
+pip install line-noder              # NumPy core only — pairwise backend
+pip install "line-noder[geo]"       # + Shapely / GeoPandas — enables strtree
 ```
 
-**Requirements:** Python ≥ 3.10, NumPy ≥ 1.24
+**Requirements:** Python ≥ 3.10, NumPy ≥ 1.24. Shapely ≥ 2.0 unlocks the
+`strtree` backend (v0.2+) and the GeoDataFrame I/O helpers.
 
 ## Quickstart
 
@@ -82,31 +83,45 @@ edges_gdf.to_file("roads_planar.gpkg")
 
 See the [full API docs](https://daudee215.github.io/line-noder/api/).
 
-### `node_lines(lines) → PlanarGraph`
+### `node_lines(lines, method="auto") → PlanarGraph`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `lines` | `list[ArrayLike]` | Each element: `(N, 2)` coordinate array, N ≥ 2 |
+| `method` | `"auto" \| "pairwise" \| "strtree"` | Backend selector. `"auto"` picks `strtree` when Shapely is available and the input has ≥ 500 segments, otherwise `"pairwise"`. |
 
 **Returns** `PlanarGraph` with `.nodes` `(N,2)` array and `.edges` list of `(int, int)` pairs.
 
+### Backends
+
+| Backend | Algorithm | Build | Query | Best for |
+|---------|-----------|------:|------:|----------|
+| `pairwise` (v0.1+) | x-sort bbox sweep + vectorised NumPy parametric test | — | O(n²) | small or dense inputs |
+| `strtree` (v0.2+) | Shapely / GEOS Sort-Tile-Recursive R-tree + same parametric test | O(n log n) | O(log n + c) per segment | large sparse inputs (road / hydro networks) |
+
+Both backends produce equivalent topology — only performance differs. Output equivalence is enforced by 50+ tests on regular grids, concurrent lines, shared endpoints, and random fuzzing.
+
 ## Benchmark
 
-Benchmarked on Intel Core i7 (single thread), Ubuntu 22.04:
+Single thread, NumPy 2.4 + Shapely 2.1 on Python 3.14:
 
-| Dataset | Segments | Intersections | Time |
-|---------|----------|---------------|------|
-| 100×100 regular grid | 200 | 10,000 | ~0.4 s |
-| 1,000 random lines | 1,000 | ~varies | ~0.2 s |
-| 5,000 random lines | 5,000 | ~varies | ~4 s |
+| Workload | Segments | v0.1 pairwise | v0.2 strtree | Speedup |
+|----------|---------:|--------------:|-------------:|--------:|
+| Sparse network | 20 000 | 1 057 ms | 418 ms | **2.5×** |
+| Sparse network | 5 000 | 113 ms | 83 ms | **1.4×** |
+| Random lines | 1 000 | 2.1 s | 1.9 s | 1.1× |
+| 100×100 grid | 200 | 129 ms | 149 ms | auto stays on pairwise |
 
-For datasets with > 50,000 segments, the v0.2 Bentley-Ottmann backend is recommended (see [ROADMAP.md](ROADMAP.md)).
+Speedup grows with input size on sparse data. On dense or small inputs the pairwise NumPy inner loop is competitive on constant factor, so `method="auto"` keeps it as the default below 500 segments.
+
+Reproduce with `pytest benchmark/ --benchmark-only`.
 
 ## Limitations
 
-- O(N²) worst-case complexity on fully-dense inputs (bounding-box pre-filter reduces this for sparse networks).
-- Coordinate snapping tolerance is 1e-8 map units; geographic CRS near poles will have reduced accuracy.
-- Collinear overlapping segments are not merged in v0.1.
+- Pairwise backend: O(N²) worst case on fully-dense inputs.
+- Strtree backend: requires Shapely; falls back to pairwise when missing.
+- Coordinate snapping tolerance is 1e-8 map units; geographic CRS near the poles will have reduced accuracy.
+- Collinear overlapping segments are not merged in v0.2 — planned for v0.3.
 
 ## Architecture
 
@@ -120,7 +135,7 @@ See [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) for the algor
   title   = {line-noder: planar edge-node graph from arbitrary polylines},
   year    = {2026},
   url     = {https://github.com/daudee215/line-noder},
-  version = {0.1.0}
+  version = {0.2.0}
 }
 ```
 

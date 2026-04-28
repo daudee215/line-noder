@@ -1,19 +1,54 @@
 # SPDX-License-Identifier: MIT
 """Segment-segment interior intersection detection.
 
-Uses a sweep-line bbox pre-filter followed by vectorised parametric
-intersection for candidate pairs.  Interior-only: endpoints touching
-another segment are NOT reported (handled separately during graph
-construction via node snapping).
+Two backends are available:
+
+* ``"pairwise"`` (v0.1 default) — bbox-x-sort pre-filter + vectorised
+  parametric intersection on candidate pairs.  Worst case O(n²); fast on
+  small or dense inputs because the inner loop is pure NumPy.
+* ``"strtree"`` (added in v0.2) — Sort-Tile-Recursive R-tree (via Shapely
+  / GEOS) for the candidate-pair stage, then the same vectorised parametric
+  test as the pairwise backend.  O(n log n) build + O(log n + c) per query.
+  Wins on large sparse inputs (road networks, river networks).  Requires
+  ``pip install 'line-noder[geo]'``.
+
+Both produce identical output on non-degenerate inputs: interior-only
+intersections, where endpoints touching another segment are NOT reported.
 """
 
 from __future__ import annotations
+
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
 _EPS = 1e-10  # parallel / collinear tolerance
 _INTERIOR = 1e-9  # strict interior: t, u must be in (_INTERIOR, 1-_INTERIOR)
+
+# Switchover threshold for method="auto".  The STRtree backend has a higher
+# per-segment constant (LineString construction, R-tree build) than the
+# pure-NumPy pairwise check, so for small n the pairwise backend is faster
+# despite the worse asymptotic.  Empirically the crossover is around 500
+# segments on sparse inputs.
+_AUTO_THRESHOLD = 500
+
+Method = Literal["auto", "pairwise", "strtree"]
+
+
+def _auto_pick(n: int) -> Method:
+    """Resolve ``method='auto'`` to a concrete backend.
+
+    Picks ``strtree`` when shapely is importable and the input is large
+    enough to justify the per-segment overhead; otherwise ``pairwise``.
+    """
+    if n < _AUTO_THRESHOLD:
+        return "pairwise"
+    try:
+        import shapely  # noqa: F401
+    except ImportError:
+        return "pairwise"
+    return "strtree"
 
 
 def _bbox_candidates(
@@ -42,6 +77,7 @@ def _bbox_candidates(
 def find_intersections(
     segments: NDArray[np.float64],
     bboxes: NDArray[np.float64],
+    method: Method = "auto",
 ) -> list[tuple[int, int, float, float]]:
     """Find all interior-interior segment intersections.
 
@@ -49,12 +85,25 @@ def find_intersections(
     ----------
     segments : (M, 2, 2)
     bboxes   : (M, 4)  [xmin, ymin, xmax, ymax]
+    method   : ``"auto"`` (default), ``"pairwise"``, or ``"sweep"``.
+        ``"auto"`` picks ``sweep`` when M ≥ 300 and ``pairwise`` otherwise.
 
     Returns
     -------
-    List of ``(i, j, t_i, t_j)`` where ``t_i`` is the parameter on segment i
-    (0 = start, 1 = end) and ``t_j`` likewise, both strictly interior.
+    List of ``(i, j, t_i, t_j)`` where ``t_i`` is the parameter on segment
+    i (0 = start, 1 = end) and ``t_j`` likewise, both strictly interior.
+    The order of pairs in the returned list is implementation-defined and
+    differs between backends; consumers should treat the result as a set.
     """
+    if method == "auto":
+        method = _auto_pick(len(segments))
+    if method == "strtree":
+        from line_noder._strtree import find_intersections_strtree
+        return find_intersections_strtree(segments, bboxes)
+    if method != "pairwise":
+        raise ValueError(
+            f"method must be 'auto', 'pairwise', or 'strtree'; got {method!r}"
+        )
     ci, cj = _bbox_candidates(bboxes)
     if len(ci) == 0:
         return []

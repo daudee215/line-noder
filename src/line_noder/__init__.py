@@ -23,4 +23,4 @@ from line_noder._graph import PlanarGraph
 from line_noder.api import node_lines
 
 __all__ = ["node_lines", "PlanarGraph"]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

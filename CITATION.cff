@@ -6,8 +6,8 @@ authors:
   - family-names: Tasleem
     given-names: Daud
     email: daudtasleem215@gmail.com
-version: 0.1.0
-date-released: "2026-04-27"
+version: 0.2.0
+date-released: "2026-04-28"
 url: "https://github.com/daudee215/line-noder"
 license: MIT
 keywords:
