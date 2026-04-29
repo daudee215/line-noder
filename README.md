@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org)
 
-**Detect all interior line-line intersections and build a planar edge-node graph — pure Python, no PostGIS required.**
+**Detect all interior line-line intersections and build a planar edge-node graph - pure Python, no PostGIS required.**
 
 ## What it does
 
@@ -32,15 +32,15 @@ The existing Python options all fall short:
 `line-noder` fills this gap. Pure NumPy, MIT licence, `pip install`.
 
 **Source signals that motivated this tool:**
-- [geopandas/geopandas#1592](https://github.com/geopandas/geopandas/issues/1592) — "ENH: Build line topology in dataframe for NetworkX" (open 2019–present)
-- [libgeos/geos#967](https://github.com/libgeos/geos/issues/967) — GEOS noding API discussion (21 comments)
-- [GIS.SE 198585](https://gis.stackexchange.com/questions/198585/split-lines-at-intersections-in-arcgis) — "Split lines at intersections" (no pure-Python answer accepted)
+- [geopandas/geopandas#1592](https://github.com/geopandas/geopandas/issues/1592) - "ENH: Build line topology in dataframe for NetworkX" (open 2019-present)
+- [libgeos/geos#967](https://github.com/libgeos/geos/issues/967) - GEOS noding API discussion (21 comments)
+- [GIS.SE 198585](https://gis.stackexchange.com/questions/198585/split-lines-at-intersections-in-arcgis) - "Split lines at intersections" (no pure-Python answer accepted)
 
 ## Install
 
 ```bash
-pip install line-noder              # NumPy core only — pairwise backend
-pip install "line-noder[geo]"       # + Shapely / GeoPandas — enables strtree
+pip install line-noder              # NumPy core only - pairwise backend
+pip install "line-noder[geo]"       # + Shapely / GeoPandas - enables strtree
 ```
 
 **Requirements:** Python ≥ 3.10, NumPy ≥ 1.24. Shapely ≥ 2.0 unlocks the
@@ -96,10 +96,10 @@ See the [full API docs](https://daudee215.github.io/line-noder/api/).
 
 | Backend | Algorithm | Build | Query | Best for |
 |---------|-----------|------:|------:|----------|
-| `pairwise` (v0.1+) | x-sort bbox sweep + vectorised NumPy parametric test | — | O(n²) | small or dense inputs |
+| `pairwise` (v0.1+) | x-sort bbox sweep + vectorised NumPy parametric test | - | O(n²) | small or dense inputs |
 | `strtree` (v0.2+) | Shapely / GEOS Sort-Tile-Recursive R-tree + same parametric test | O(n log n) | O(log n + c) per segment | large sparse inputs (road / hydro networks) |
 
-Both backends produce equivalent topology — only performance differs. Output equivalence is enforced by 50+ tests on regular grids, concurrent lines, shared endpoints, and random fuzzing.
+Both backends produce equivalent topology - only performance differs. Output equivalence is enforced by 50+ tests on regular grids, concurrent lines, shared endpoints, and random fuzzing.
 
 ## Benchmark
 
@@ -121,7 +121,7 @@ Reproduce with `pytest benchmark/ --benchmark-only`.
 - Pairwise backend: O(N²) worst case on fully-dense inputs.
 - Strtree backend: requires Shapely; falls back to pairwise when missing.
 - Coordinate snapping tolerance is 1e-8 map units; geographic CRS near the poles will have reduced accuracy.
-- Collinear overlapping segments are not merged in v0.2 — planned for v0.3.
+- Collinear overlapping segments are not merged in v0.2 - planned for v0.3.
 
 ## Architecture
 
@@ -141,4 +141,4 @@ See [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md) for the algor
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
