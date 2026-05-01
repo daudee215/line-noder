@@ -44,7 +44,7 @@ treat the result as a set.
 
 - An attempt at a from-scratch Bentley-Ottmann sweep was made but produced
   incorrect results on regular grids with shared endpoints; that work is
-  deferred to v0.3.  See [ROADMAP.md](../ROADMAP.md).
+  deferred to v0.3.  See [ROADMAP.md](https://github.com/daudee215/line-noder/blob/main/ROADMAP.md).
 - No breaking API changes — all v0.1 calls work unchanged on v0.2.
 
 ## v0.1.0 (2026-04-27)
@@ -53,3 +53,4 @@ treat the result as a set.
 - Pure-NumPy sort-and-sweep intersection detection.
 - `node_lines()` public API.
 - Optional GeoPandas I/O via `line_noder.shapely_io`.
+
